@@ -26,7 +26,9 @@ qc.measure(q[0], c[0])
 qc.measure(q[1], c[1])
 qc.measure(q[2], c[2])
 
-backend = Aer.get_backend("qasm_simulator")
-job = execute(qc, backend)
-print(job.result().get_counts(qc))
-extern_func()
+if __name__=="__main__":
+
+    backend = Aer.get_backend("qasm_simulator")
+    job = execute(qc, backend)
+    print(job.result().get_counts(qc))
+    extern_func()
