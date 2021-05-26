@@ -10,4 +10,6 @@ def extern_func():
 	backend = qiskit.Aer.get_backend("qasm_simulator")
 	job = renamed_execute(qc, backend)
 
-	print(job.result().get_counts(qc))
+	result = job.result().get_counts(qc)
+	print(result)
+	return result

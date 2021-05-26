@@ -33,5 +33,7 @@ def run_circuit():
     qc = generate_circuit()
     backend = Aer.get_backend("qasm_simulator")
     job = execute(qc, backend)
-    print(job.result().get_counts(qc))
-    extern_func()
+    result = job.result().get_counts(qc)
+    print(result)
+    external_result = extern_func()
+    return [result, external_result]

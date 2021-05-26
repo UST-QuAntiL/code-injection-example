@@ -5,8 +5,8 @@
 The dependencies for this project can be installed manually or with [Poetry](https://python-poetry.org).
 
  *  Python `^3.7`
- *  `qiskit==0.26.0`
- *  `click==8.0.0`
+ *  `qiskit==0.26.2`
+ *  `click==8.0.1`
 
 Install with Poetry: `poetry install`
 
@@ -29,6 +29,11 @@ python -m qiskit_interceptor --entry-point=user_code/test_package/user_code:run_
 ```
 
 Calling `python -m module_name` executes a python module's `__main__.py` file.
+
+The `--quiet` flag can be used to suppress all output on stdout and stderr that is *not* from the user code.
+
+If the entry point is a function that returned a serializable result (e.g. a string, a tuple, a list, or a dict) then the result will be written to `run_result.json`.
+
 
 ## How it works
 
@@ -75,3 +80,9 @@ Otherwise the package is imported with `importlib.import_module` and the specifi
 
 Before the user code is executed, the path the user code is in is added to the current python path.
 This should allow most imports to succeed as if the module was direktly executed with python.
+
+### Redirecting `stdout` and `stderr` for the quiet flag
+
+This is done with the context managers provided by the python standard library: <https://docs.python.org/3/library/contextlib.html#contextlib.redirect_stdout>
+
+Another way to use this feature would be to redirect the user code output into files.

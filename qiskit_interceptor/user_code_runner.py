@@ -1,6 +1,6 @@
 
 from pathlib import Path
-from typing import Optional, Tuple, Union
+from typing import Any, Optional, Tuple, Union
 
 def _find_user_code(entry_point: Union[str, Path]) -> Tuple[Path, Optional[str], Optional[str]]:
     """Generate a (path, package, method) triple from the given entry point.
@@ -46,7 +46,7 @@ def _run_package_as_main(package: str):
     import runpy
     runpy.run_module(package, init_globals={}, run_name="__main__")
 
-def _run_method_in_package(package: str, method: str):
+def _run_method_in_package(package: str, method: str) -> Any:
     """Run a specific method of a package.
 
     Args:
@@ -56,9 +56,9 @@ def _run_method_in_package(package: str, method: str):
     from importlib import import_module
     imported_package = import_module(package)
     run_method = getattr(imported_package, method)
-    run_method()
+    return run_method()
 
-def run_user_code(entry_point: Union[str, Path]):
+def run_user_code(entry_point: Union[str, Path]) -> Optional[Any]:
     """Run user code from the given entry_point.
 
     Args:
@@ -82,6 +82,7 @@ def run_user_code(entry_point: Union[str, Path]):
     
     if not method:
         _run_package_as_main(package)
+        return None
     else:
-        _run_method_in_package(package, method=method)
+        return _run_method_in_package(package, method=method)
 
