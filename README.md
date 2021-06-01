@@ -91,6 +91,10 @@ Another way to use this feature would be to redirect the user code output into f
 
 
 
+## Acknowledgements
+
+Current development is supported by the [Federal Ministry for Economic Affairs and Energy](http://www.bmwi.de/EN) as part of the [PlanQK](https://planqk.de) project (01MK20005N).
+
 ## Haftungsausschluss
 
 Dies ist ein Forschungsprototyp.
