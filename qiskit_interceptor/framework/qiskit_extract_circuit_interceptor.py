@@ -17,7 +17,9 @@ from typing import List, Sequence, Union
 from qiskit.circuit.quantumcircuit import QuantumCircuit
 from qiskit.pulse.schedule import Schedule
 
-from .interceptor import ExecuteCallMetadata, QiskitInterceptor
+from ..interceptor import ExecuteCallMetadata
+
+from .qiskit import QiskitInterceptor
 
 class ExtractCircuitInterceptor(QiskitInterceptor, priority=100):
     """Extract all quantum circuits and schedules from the call arguments.

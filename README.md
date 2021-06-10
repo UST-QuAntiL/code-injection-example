@@ -33,6 +33,10 @@ python -m qiskit_interceptor --entry-point=user_code/test_package/user_code:run_
 python -m qiskit_interceptor --entry-point=user_code/test_package/user_code:run_circuit --entry-point-arguments='[1, 2, 3]'
 python -m qiskit_interceptor --entry-point=user_code/test_package/user_code:run_circuit --entry-point-arguments='{"arg_one": "value", "arg_two": 2}'
 python -m qiskit_interceptor --entry-point=user_code/test_package/user_code:run_circuit --entry-point-arguments='{"args": [1, 2, 3], "kwargs": {"arg_one": "value", "arg_two": 2}}'
+
+# provide arguments for the interceptors (must be a json object)
+python -m qiskit_interceptor --entry-point=user_code/test_file/user_code.py --interceptor-arguments='{"backend": "qasm_simulator"}'
+python -m qiskit_interceptor --entry-point=user_code/test_file/user_code.py --interceptor-arguments='{"backend": "statevector_simulator"}'
 ```
 
 Calling `python -m module_name` executes a python module's `__main__.py` file.
