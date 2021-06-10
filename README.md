@@ -28,6 +28,11 @@ python -m qiskit_interceptor --entry-point=user_code/test_package/user_code
 
 # run the package user code demo with a custom entry point
 python -m qiskit_interceptor --entry-point=user_code/test_package/user_code:run_circuit
+
+# provide arguments for the entry point function (positional only, keyword only, both types)
+python -m qiskit_interceptor --entry-point=user_code/test_package/user_code:run_circuit --entry-point-arguments='[1, 2, 3]'
+python -m qiskit_interceptor --entry-point=user_code/test_package/user_code:run_circuit --entry-point-arguments='{"arg_one": "value", "arg_two": 2}'
+python -m qiskit_interceptor --entry-point=user_code/test_package/user_code:run_circuit --entry-point-arguments='{"args": [1, 2, 3], "kwargs": {"arg_one": "value", "arg_two": 2}}'
 ```
 
 Calling `python -m module_name` executes a python module's `__main__.py` file.
@@ -35,6 +40,11 @@ Calling `python -m module_name` executes a python module's `__main__.py` file.
 The `--quiet` flag can be used to suppress all output on stdout and stderr that is *not* from the user code.
 
 If the entry point is a function that returned a serializable result (e.g. a string, a tuple, a list, or a dict) then the result will be written to `run_result.json`.
+
+The interceptor can pass arguments to an entry point function with the `--entry-point-arguments` option.
+The option must be a valid json object.
+A list is mapped to the positional parameters of the function while a dict is mapped to the keyword arguments of the function.
+If the dict contains only the keys `"args"` and `"kwargs"` then the value of `"args"` must be a list and is mapped to the positional arguments and `"kwargs"` must be a dict and is mapped to keyword arguments.
 
 
 ## How it works

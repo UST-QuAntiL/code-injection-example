@@ -14,7 +14,8 @@
 
 
 from pathlib import Path
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Sequence, Tuple, Union
+
 
 def _find_user_code(entry_point: Union[str, Path]) -> Tuple[Path, Optional[str], Optional[str]]:
     """Generate a (path, package, method) triple from the given entry point.
@@ -60,23 +61,29 @@ def _run_package_as_main(package: str):
     import runpy
     runpy.run_module(package, init_globals={}, run_name="__main__")
 
-def _run_method_in_package(package: str, method: str) -> Any:
+def _run_method_in_package(package: str, method: str, entry_point_arguments: Optional[Dict[str, Union[Sequence[Any], Dict[str, Any]]]]=None) -> Any:
     """Run a specific method of a package.
 
     Args:
         package (str): The package to import
         method (str): the method to run in that package
+        entry_point_arguments ({"args": Sequence[Any], "kwargs": Dict[str, Any]}): A dict containing the positional and keyword arguments to pass to the entry point function. Defaults to None.
     """
     from importlib import import_module
     imported_package = import_module(package)
     run_method = getattr(imported_package, method)
-    return run_method()
+    if entry_point_arguments is None:
+        return run_method()
 
-def run_user_code(entry_point: Union[str, Path]) -> Optional[Any]:
+    # run method with arguments
+    return run_method(*entry_point_arguments.get("args", []), **entry_point_arguments.get("kwargs", {}))
+
+def run_user_code(entry_point: Union[str, Path], entry_point_arguments: Optional[Dict[str, Union[Sequence[Any], Dict[str, Any]]]]=None) -> Optional[Any]:
     """Run user code from the given entry_point.
 
     Args:
         entry_point (Union[str, Path]): the entry point of the code to run
+        entry_point_arguments ({"args": Sequence[Any], "kwargs": Dict[str, Any]}): A dict containing the positional and keyword arguments to pass to the entry point function. Defaults to None.
 
     Raises:
         ValueError: If the entry point could not be parsed or found on disk
@@ -98,5 +105,5 @@ def run_user_code(entry_point: Union[str, Path]) -> Optional[Any]:
         _run_package_as_main(package)
         return None
     else:
-        return _run_method_in_package(package, method=method)
+        return _run_method_in_package(package, method=method, entry_point_arguments=entry_point_arguments)
 

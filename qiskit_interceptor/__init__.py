@@ -18,7 +18,7 @@
 from os import devnull
 from contextlib import redirect_stderr, redirect_stdout, nullcontext
 from pathlib import Path
-from typing import Union
+from typing import Any, Dict, Optional, Sequence, Union
 
 from .interceptor import QiskitInterceptorInterrupt
 from .analyze import analyze_interrupted_execution, analyze_execution_results
@@ -30,11 +30,12 @@ def load_interceptors():
     from . import extract_circuit_interceptor # importing already loads the plugin
 
 
-def run(entry_point: Union[str, Path], intercept: bool=False, quiet: bool=False):
+def run(entry_point: Union[str, Path], entry_point_arguments: Optional[Dict[str, Union[Sequence[Any], Dict[str, Any]]]]=None, intercept: bool=False, quiet: bool=False):
     """Run the user code given by the entry point argument.
 
     Args:
         entry_point (Union[str, Path]): the path + qualified method of the code to run (e.g. 'path/to/code.py' or 'path/to/module.submodule:reun_method')
+        entry_point_arguments ({"args": Sequence[Any], "kwargs": Dict[str, Any]}): A dict containing the positional and keyword arguments to pass to the entry point function. Defaults to None.
         intercept (bool, optional): Wether to actually intercept the calls to `qiskit.execute`. Defaults to False.
         quiet (bool, optional): If True only output stdout and stderr of the user code. Defaults to False.
     """
@@ -47,7 +48,7 @@ def run(entry_point: Union[str, Path], intercept: bool=False, quiet: bool=False)
                 from . import qiskit_monkey_patch
         run_result = None
         try:
-            run_result = run_user_code(entry_point=entry_point)
+            run_result = run_user_code(entry_point=entry_point, entry_point_arguments=entry_point_arguments)
         except QiskitInterceptorInterrupt as interrupt:
             with redirect_out(dev_null_file), redirect_err(dev_null_file):
                 analyze_interrupted_execution(interrupt=interrupt)
