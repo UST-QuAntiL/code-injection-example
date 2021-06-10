@@ -29,7 +29,8 @@ def generate_circuit():
 
     return qc
 
-def run_circuit():
+def run_circuit(*args, **kwargs):
+    print("Arguments:", args, "Keyword Arguments:", kwargs)
     qc = generate_circuit()
     backend = Aer.get_backend("qasm_simulator")
     job = execute(qc, backend)
