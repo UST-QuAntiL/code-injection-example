@@ -150,11 +150,6 @@ class BraketDWaveInterceptor():
         sampler_signature_complete = str(signature(embedding_composite))
         sampler_signature_list = [str(value.split("=")[0]) for value in sampler_signature_complete.strip('(').strip(')').split(",")]
         sampler_signature = str('(' + ','.join(sampler_signature_list) + ')')
-
-        print(sampler_signature)
-        print(_SUPPORTED_SIGNATURES_EMBEDDING)
-        print()
-
         if sampler_signature not in _SUPPORTED_SIGNATURES_EMBEDDING:
             raise Warning("The given Embedding Composite function has an unknown signature that may not be supported!")
         BraketDWaveInterceptor.__embedding_composite = embedding_composite
