@@ -18,11 +18,17 @@
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, NamedTuple, Optional, Tuple, Union
 
-
 from inspect import signature
 
 
 # set of supported signatures
+# _SUPPORTED_SIGNATURES_EMBEDDING = {
+#     "(child_sampler, find_embedding, embedding_parameters=None, scale_aware=False, child_structure_search)",
+# }
+_SUPPORTED_SIGNATURES_EMBEDDING = {
+    "(child_sampler, find_embedding, embedding_parameters, scale_aware, child_structure_search)",
+}
+
 _SUPPORTED_SIGNATURES_DWAVE = {
     "(failover=False, retry_interval=-1, **config)",
 }
@@ -91,11 +97,15 @@ class DWaveInterceptor():
     __interceptors: List[Tuple[Union[int, float], "DWaveInterceptor"]] = []
     __interceptors_sorted: bool = False # True if the list is sorted
 
+    # the 'embedding composite method' function
+    __embedding_composite: Callable
+    _embedding_composite_signature: str # the signature of 'embedding composite method'
+
     # the 'dwave sampler method' function
     __dwave_sampler: Callable
     _dwave_sampler_signature: str # the signature of 'dwave sampler method'
 
-    # the 'dwave sampler method' function
+    # the 'hybrid sampler method' function
     __hybrid_sampler: Callable
     _hybrid_sampler_signature: str # the signature of 'hybrid sampler method'
 
@@ -133,6 +143,26 @@ class DWaveInterceptor():
 
 
     @staticmethod
+    def set_embedding_composite(embedding_composite: Callable):
+        """Set the 'dwave sampler method' callable.
+
+        Args:
+            embedding_composite (Callable): EmbeddingComposite
+
+        Raises:
+            Warning: if the signature does not match any supported signatures
+        """
+        sampler_signature_complete = str(signature(embedding_composite))
+        sampler_signature_list = [str(value.split("=")[0]) for value in sampler_signature_complete.strip('(').strip(')').split(",")]
+        sampler_signature = str('(' + ','.join(sampler_signature_list) + ')')
+
+        if sampler_signature not in _SUPPORTED_SIGNATURES_EMBEDDING:
+            raise Warning("The given Embedding Composite function has an unknown signature that may not be supported!")
+        DWaveInterceptor.__embedding_composite = embedding_composite
+        DWaveInterceptor._embedding_composite_signature = sampler_signature
+
+
+    @staticmethod
     def set_dwave_sampler(dwave_sampler: Callable):
         """Set the 'dwave sampler method' callable.
 
@@ -144,7 +174,7 @@ class DWaveInterceptor():
         """
         sampler_signature = str(signature(dwave_sampler))
         if sampler_signature not in _SUPPORTED_SIGNATURES_DWAVE:
-            raise Warning("The given D-Wave Snmpler function has an unknown signature that may not be supported!")
+            raise Warning("The given D-Wave Sampler function has an unknown signature that may not be supported!")
         DWaveInterceptor.__dwave_sampler = dwave_sampler
         DWaveInterceptor._dwave_sampler_signature = sampler_signature
 
@@ -161,9 +191,55 @@ class DWaveInterceptor():
         """
         sampler_signature = str(signature(hybrid_sampler))
         if sampler_signature not in _SUPPORTED_SIGNATURES_HYBRID:
-            raise Warning("The given D-Wave Snmpler function has an unknown signature that may not be supported!")
+            raise Warning("The given Leap Hybrid Sampler function has an unknown signature that may not be supported!")
         DWaveInterceptor.__hybrid_sampler = hybrid_sampler
         DWaveInterceptor._hybrid_sampler_signature = sampler_signature
+
+
+    @staticmethod
+    def embedding_interceptor(*args, **kwargs):
+        """Run all interceptors and call 'embedding composite method'.
+
+        Raises:
+            DWaveInterceptorInterrupt: If the execution was terminated by an interceptor
+
+        Returns:
+            Any: the result of 'embedding composite method'
+        """
+        embedding_composite = DWaveInterceptor.__embedding_composite
+        if embedding_composite is None:
+            raise Exception("Must call set_embedding_composite before using embedding_interceptor!")
+
+        sampler_metadata = SamplerCallMetadata(args=args, kwargs=kwargs)
+
+        # run all intercept_sampler interceptors
+        for _, interceptor in DWaveInterceptor._get_interceptors():
+            try:
+                new_metadata = interceptor.intercept_sampler(sampler_metadata=sampler_metadata)
+                if new_metadata is not None:
+                    sampler_metadata = new_metadata
+            except NotImplementedError:
+                pass
+
+            if sampler_metadata.should_terminate:
+                raise DWaveInterceptorInterrupt(sampler_metadata)
+
+        # perform actual method
+        result = embedding_composite(*sampler_metadata.args, **sampler_metadata.kwargs)
+
+        # run all intercept_sampler_result interceptors
+        for _, interceptor in DWaveInterceptor._get_interceptors():
+            try:
+                new_metadata = interceptor.intercept_sampler_result(result=result, sampler_metadata=sampler_metadata)
+                if new_metadata is not None:
+                    sampler_metadata = new_metadata
+            except NotImplementedError:
+                pass
+
+        # store result
+        DWaveInterceptor.__sampler_interception_results.append(SamplerResult(call_metadata=sampler_metadata, result=result));
+
+        return result
 
 
     @staticmethod

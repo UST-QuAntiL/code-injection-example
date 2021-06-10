@@ -21,13 +21,13 @@ from .interceptor import DWaveInterceptor
 
 
 # pass old dwave sampler methods to DWaveInterceptor
-# DWaveInterceptor.set_embedding_composite(EmbeddingComposite)
+DWaveInterceptor.set_embedding_composite(EmbeddingComposite)
 DWaveInterceptor.set_dwave_sampler(DWaveSampler)
 DWaveInterceptor.set_hybrid_sampler(LeapHybridSampler)
 
-# @wraps(EmbeddingComposite)
-# def new_EmbeddingComposite(*args, **kwargs):
-# 	return DWaveInterceptor.sampler_interceptor(*args, **kwargs)
+@wraps(EmbeddingComposite)
+def new_EmbeddingComposite(*args, **kwargs):
+    return DWaveInterceptor.embedding_interceptor(*args, **kwargs)
 
 @wraps(DWaveSampler)
 def new_DWaveSampler(*args, **kwargs):
@@ -38,6 +38,6 @@ def new_LeapHybridSampler(*args, **kwargs):
     return DWaveInterceptor.hybrid_interceptor(*args, **kwargs)
 
 # patch in new method
-# EmbeddingComposite = new_EmbeddingComposite
+EmbeddingComposite = new_EmbeddingComposite
 DWaveSampler = new_DWaveSampler
 LeapHybridSampler = new_LeapHybridSampler

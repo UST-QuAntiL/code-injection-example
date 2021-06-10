@@ -24,6 +24,13 @@ from inspect import signature
 
 
 # set of supported signatures
+# _SUPPORTED_SIGNATURES_EMBEDDING = {
+#     "(child_sampler, find_embedding, embedding_parameters=None, scale_aware=False, child_structure_search)",
+# }
+_SUPPORTED_SIGNATURES_EMBEDDING = {
+    "(child_sampler, find_embedding, embedding_parameters, scale_aware, child_structure_search)",
+}
+
 _SUPPORTED_SIGNATURES_BRAKETDWAVE = {
     "(s3_destination_folder: 'AwsSession.S3DestinationFolder', device_arn: 'str' = None, aws_session: 'AwsSession' = None, logger: 'Logger' = <Logger braket.ocean_plugin.braket_dwave_sampler (WARNING)>)"
 }
@@ -89,6 +96,10 @@ class BraketDWaveInterceptor():
     __interceptors: List[Tuple[Union[int, float], "BraketDWaveInterceptor"]] = []
     __interceptors_sorted: bool = False # True if the list is sorted
 
+    # the 'embedding composite method' function
+    __embedding_composite: Callable
+    _embedding_composite_signature: str # the signature of 'embedding composite method'
+
     # the 'braket dwave sampler method' function
     __braketdwave_sampler: Callable
     _braketdwave_sampler_signature: str # the signature of 'braket dwave sampler method'
@@ -127,6 +138,30 @@ class BraketDWaveInterceptor():
 
 
     @staticmethod
+    def set_embedding_composite(embedding_composite: Callable):
+        """Set the 'dwave sampler method' callable.
+
+        Args:
+            embedding_composite (Callable): EmbeddingComposite
+
+        Raises:
+            Warning: if the signature does not match any supported signatures
+        """
+        sampler_signature_complete = str(signature(embedding_composite))
+        sampler_signature_list = [str(value.split("=")[0]) for value in sampler_signature_complete.strip('(').strip(')').split(",")]
+        sampler_signature = str('(' + ','.join(sampler_signature_list) + ')')
+
+        print(sampler_signature)
+        print(_SUPPORTED_SIGNATURES_EMBEDDING)
+        print()
+
+        if sampler_signature not in _SUPPORTED_SIGNATURES_EMBEDDING:
+            raise Warning("The given Embedding Composite function has an unknown signature that may not be supported!")
+        BraketDWaveInterceptor.__embedding_composite = embedding_composite
+        BraketDWaveInterceptor._embedding_composite_signature = sampler_signature
+
+
+    @staticmethod
     def set_braketdwave_sampler(braketdwave_sampler: Callable):
         """Set the 'braket dwave sampler method' callable.
 
@@ -141,6 +176,52 @@ class BraketDWaveInterceptor():
             raise Warning("The given Amazon Braket D-Wave Sampler function has an unknown signature that may not be supported!")
         BraketDWaveInterceptor.__braketdwave_sampler = braketdwave_sampler
         BraketDWaveInterceptor._braketdwave_sampler_signature = sampler_signature
+
+
+    @staticmethod
+    def embedding_interceptor(*args, **kwargs):
+        """Run all interceptors and call 'embedding composite method'.
+
+        Raises:
+            DWaveInterceptorInterrupt: If the execution was terminated by an interceptor
+
+        Returns:
+            Any: the result of 'embedding composite method'
+        """
+        embedding_composite = BraketDWaveInterceptor.__embedding_composite
+        if embedding_composite is None:
+            raise Exception("Must call set_embedding_composite before using embedding_interceptor!")
+
+        sampler_metadata = SamplerCallMetadata(args=args, kwargs=kwargs)
+
+        # run all intercept_sampler interceptors
+        for _, interceptor in BraketDWaveInterceptor._get_interceptors():
+            try:
+                new_metadata = interceptor.intercept_sampler(sampler_metadata=sampler_metadata)
+                if new_metadata is not None:
+                    sampler_metadata = new_metadata
+            except NotImplementedError:
+                pass
+
+            if sampler_metadata.should_terminate:
+                raise BraketDWaveInterceptorInterrupt(sampler_metadata)
+
+        # perform actual method
+        result = embedding_composite(*sampler_metadata.args, **sampler_metadata.kwargs)
+
+        # run all intercept_sampler_result interceptors
+        for _, interceptor in BraketDWaveInterceptor._get_interceptors():
+            try:
+                new_metadata = interceptor.intercept_sampler_result(result=result, sampler_metadata=sampler_metadata)
+                if new_metadata is not None:
+                    sampler_metadata = new_metadata
+            except NotImplementedError:
+                pass
+
+        # store result
+        BraketDWaveInterceptor.__sampler_interception_results.append(SamplerResult(call_metadata=sampler_metadata, result=result));
+
+        return result
 
 
     @staticmethod
