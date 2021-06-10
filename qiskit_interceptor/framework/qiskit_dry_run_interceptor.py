@@ -13,7 +13,8 @@
 # limitations under the License.
 
 
-from .interceptor import ExecuteCallMetadata, QiskitInterceptor
+from ..interceptor import ExecuteCallMetadata
+from .qiskit import QiskitInterceptor
 
 class DryRunInterceptor(QiskitInterceptor, priority=0):
     """Interrupt the execution and return the experiments as result.

@@ -33,6 +33,10 @@ python -m qiskit_interceptor --entry-point=user_code/test_package/user_code:run_
 python -m qiskit_interceptor --entry-point=user_code/test_package/user_code:run_circuit --entry-point-arguments='[1, 2, 3]'
 python -m qiskit_interceptor --entry-point=user_code/test_package/user_code:run_circuit --entry-point-arguments='{"arg_one": "value", "arg_two": 2}'
 python -m qiskit_interceptor --entry-point=user_code/test_package/user_code:run_circuit --entry-point-arguments='{"args": [1, 2, 3], "kwargs": {"arg_one": "value", "arg_two": 2}}'
+
+# provide arguments for the interceptors (must be a json object)
+python -m qiskit_interceptor --entry-point=user_code/test_file/user_code.py --interceptor-arguments='{"backend": "qasm_simulator"}'
+python -m qiskit_interceptor --entry-point=user_code/test_file/user_code.py --interceptor-arguments='{"backend": "statevector_simulator"}'
 ```
 
 Calling `python -m module_name` executes a python module's `__main__.py` file.
@@ -51,14 +55,14 @@ If the dict contains only the keys `"args"` and `"kwargs"` then the value of `"a
 
 ### The qiskit monkey patch
 
-File: `qiskit_interceptor/qiskit_monkey_patch.py`
+File: `qiskit_interceptor/framework/qiskit.py`
 
 Registers the original execute method with the `QiskitInterceptor` and sets `qiskit.execute` to a new method that calls `QiskitInterceptor.execute_interceptor`.
 The new method is decorated with `functools.wraps` to copy all relevant metadata to the new method.
 
 ### The QiskitInterceptor
 
-File: `qiskit_interceptor/interceptor.py`
+File: `qiskit_interceptor/framework/qiskit.py`
 
 The interceptor gathers all Interceptor plugins using the `__init_subclass__` hook (see [`object.__init_subclass__`](https://docs.python.org/3/reference/datamodel.html?highlight=__init_subclass__#object.__init_subclass__)).
 
@@ -69,7 +73,7 @@ In concurrent programs the order of the execution results may vary.
 
 ### The interceptor subclasses
 
-Files: `qiskit_interceptor/extract_circuit_interceptor.py` and `qiskit_interceptor/dry_run_interceptor.py`
+Files: `qiskit_interceptor/framework/qiskit_extract_circuit_interceptor.py` and `qiskit_interceptor/framework/qiskit_dry_run_interceptor.py`
 
 An interceptor plugin is a python class that extends `QiskitInterceptor`.
 The subclass is **registered on import** by the `__init_subclass__` hook (see [`object.__init_subclass__`](https://docs.python.org/3/reference/datamodel.html?highlight=__init_subclass__#object.__init_subclass__)) of the `QiskitInterceptor`.
@@ -81,6 +85,8 @@ Raising a `NotImplementedError` will simply skip the interceptor.
 The interceptor gets a metadata object that contains the arguments to call `qiskit.execute` with (`args` and `kwargs`), an `extra_data` dict to store data for analysis of the `intercept_execute_result` call, and `should_terminate` and `termination_result` to terminate normal execution with the termination result.
 The metadata can be modified in place or a new instance can be returned.
 If `should_terminate` is `True` after calling the `intercept_execute` method, then the `QiskitInterceptor` will raise a `QiskitInterceptorInterrupt` immediately.
+
+The framework specific interceptors use the same mechanism with the `BaseInterceptor` class.
 
 ### The user code runner
 

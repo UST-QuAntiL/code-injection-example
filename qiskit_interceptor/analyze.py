@@ -15,20 +15,19 @@
 
 """Analysis code called after the user code finished executing."""
 
-from typing import Any, Optional
-
-from pathlib import Path
 from json import dumps
+from pathlib import Path
+from typing import Any, Optional, Type
 
-from .interceptor import QiskitInterceptorInterrupt, QiskitInterceptor
+from qiskit_interceptor.framework.qiskit import QiskitInterceptor
 
-def analyze_execution_results(result: Optional[Any]):
+from .interceptor import BaseInterceptor, InterceptorInterrupt
+
+
+def analyze_execution_results(result: Optional[Any], interceptor: Type[BaseInterceptor]):
     """Demo analyze method, gets called after user code finished."""
-    results = QiskitInterceptor.get_execution_results() # get all results
-    for index, call in enumerate(results):
-        print("\nCall {}:\n".format(index + 1))
-        for circuit in call.call_metadata.extra_data.get("circuits", []):
-            print(circuit.draw())
+    if interceptor is QiskitInterceptor:
+        analyze_execution_results_qiskit(result=result, interceptor=interceptor)
 
     if result is None:
         return  # no result
@@ -48,11 +47,27 @@ def analyze_execution_results(result: Optional[Any]):
         run_result_file.write(serialized_result)
 
 
-def analyze_interrupted_execution(interrupt: QiskitInterceptorInterrupt):
+def analyze_interrupted_execution(interrupt: InterceptorInterrupt, interceptor: Type[BaseInterceptor]):
     """Demo analyze method, gets called when the Qiskit interceptor interrupted normal execution."""
     # interrupt contains the call metadata of the call that was interrupted
     print("\nInterrupted call:\n")
     print(repr(interrupt.execute_metadata))
+    if interceptor is QiskitInterceptor:
+        analyze_interrupted_execution_qiskit(interrupt=interrupt, interceptor=interceptor)
+
+
+# framework specific analysis functions
+
+
+def analyze_execution_results_qiskit(result: Optional[Any], interceptor: Type[BaseInterceptor]):
+    results = interceptor.get_execution_results() # get all results
+    for index, call in enumerate(results):
+        print("\nCall {}:\n".format(index + 1))
+        for circuit in call.call_metadata.extra_data.get("circuits", []):
+            print(circuit.draw())
+
+
+def analyze_interrupted_execution_qiskit(interrupt: InterceptorInterrupt, interceptor: Type[BaseInterceptor]):
     try:
         circuit = interrupt.execute_metadata.termination_result
         print(circuit.draw())
