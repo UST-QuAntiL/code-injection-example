@@ -16,7 +16,7 @@
 """Module containing the qiskit interceptor and some helper classes."""
 
 from inspect import signature
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Callable, List, Tuple, Union
 
 from ..interceptor import BaseInterceptor, ExecuteResult
 
@@ -31,10 +31,10 @@ class QiskitInterceptor(BaseInterceptor, framework="qiskit"):
 
     # the list of interceptors
     __interceptors: List[Tuple[Union[int, float], "QiskitInterceptor"]] = []
-    __interceptors_sorted: bool = False # True if the list is sorted
+    __interceptors_sorted: bool = False  # True if the list is sorted
 
     # the signature of 'qiskit.execute'
-    _qiskit_execute_signature: str 
+    _qiskit_execute_signature: str
 
     # the execution results
     _execution_results: List[ExecuteResult] = []
@@ -55,9 +55,8 @@ class QiskitInterceptor(BaseInterceptor, framework="qiskit"):
             QiskitInterceptor.__interceptors.sort(key=lambda x: x[0], reverse=True)
         return QiskitInterceptor.__interceptors
 
-
     @classmethod
-    def _set_intercepted_function(cls, func: Callable):
+    def _set_intercepted_function(cls, method_name: str, func: Callable):
         """Set the 'qiskit.execute' callable.
 
         Args:
@@ -68,25 +67,24 @@ class QiskitInterceptor(BaseInterceptor, framework="qiskit"):
         """
         execute_signature = str(signature(func))
         if execute_signature not in _SUPPORTED_SIGNATURES:
-            raise Warning("The given qiskit execute funktion has an unknown signature that may not be supported!")
+            raise Warning(
+                "The given qiskit execute funktion has an unknown signature that may not be supported!"
+            )
         QiskitInterceptor._qiskit_execute_signature = execute_signature
-        super()._set_intercepted_function(func)
+        super()._set_intercepted_function(method_name, func)
 
     @staticmethod
     def load_interceptors():
         # import extra interceptors
-        from . import qiskit_extract_circuit_interceptor, qiskit_inject_aer_backend_interceptor
+        from . import (
+            qiskit_extract_circuit_interceptor,
+            qiskit_inject_aer_backend_interceptor,
+        )
 
     @staticmethod
     def load_dry_run_interceptor():
         # import dry run interceptor
         from . import qiskit_dry_run_interceptor
-
-    @classmethod
-    def _build_call_metadata(cls, args: Tuple[Any], kwargs: Dict[str, Any]):
-        metadata = super()._build_call_metadata(args=args, kwargs=kwargs)
-        metadata.func = "qiskit.execute"
-        return metadata
 
     @staticmethod
     def patch_framework():
@@ -94,13 +92,16 @@ class QiskitInterceptor(BaseInterceptor, framework="qiskit"):
 
         import qiskit
 
+        # the name of the intercepted function (will be available in the call metadate object)
+        method_name = "qiskit.execute"
+
         # pass old qiskit.execute method to QiskitInterceptor
-        QiskitInterceptor._set_intercepted_function(qiskit.execute)
+        QiskitInterceptor._set_intercepted_function(method_name, qiskit.execute)
 
         @wraps(qiskit.execute)
         def new_execute(*args, **kwargs):
-            return QiskitInterceptor.execute_interceptor(*args, **kwargs)
+            # the method name of the intercepted function must be the first argument
+            return QiskitInterceptor.execute_interceptor(method_name, *args, **kwargs)
 
         # patch in new method
         qiskit.execute = new_execute
-
