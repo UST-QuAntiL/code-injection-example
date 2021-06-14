@@ -106,6 +106,46 @@ This is done with the context managers provided by the python standard library: 
 Another way to use this feature would be to redirect the user code output into files.
 
 
+### Adding support for a new Framework
+
+To add support for another framework just create a new framework specific Interceptor class that extends `BaseInterceptor`.
+
+The framework specific interceptor **must** implement the following methods:
+
+ *  `load_interceptors`\
+    To load all interceptor plugins on demand.
+ *  `load_dry_run_interceptor`\
+    To load the special dry run interceptor plugin on demand.
+    The dry run interceptor should prevent actual execution of any quantum circuit.
+ *  `patch_framework`
+    To apply the monkey patch that intercepts all circuit executing methods of the framework.
+ *  `_get_interceptors`\
+    To get a list of interceptor plugins.
+
+The framework specific interceptor **should** implement the following methods:
+
+ *  `__init_subclass__`\
+    See QiskitInterceptor for an example on how to use this to register interceptor plugins.
+ *  `_set_intercepted_function`\
+    To check the signature of the intercepted function against a list of known signatures (see QiskitInterceptor).
+
+If *multiple functions* are intercepted then the interceptors can differentiate witch function the current call metadata belongs to by checking the `method_name` of the call metadata object.
+
+
+### What this example code does not do
+
+ *  Dependency management:\
+    The user code runner does not install dependencies for the user code. This must be done before invoking the user code runner!
+ *  Support multiple versions of quantum SDKs:\
+    The interceptor will issue warnings in the stdout log (if not suppressed by the `--quiet` flag) if the signature of the intercepted method does not match the known signature for that method. However this will only help debugging if things go wrong and cannot prevent things from going wrong.
+ *  File System Isolation:\
+    User code that writes files to the file system can do so without any restrictions. Use your operating system utilities or containers to provide a sandbox for the code!
+ *  Intercepting Classes:\
+    The interception method used only works reliably (and with minimal side effects) for functions.
+    To intercept classes more care has to be taken as a class can have class level attributes and functions!
+    Overwriting single functions of the class should be preferred.
+    In some instances inheriting from the class may be necessary.
+
 
 ## Acknowledgements
 
